@@ -119,6 +119,7 @@ class PluginMain extends PluginBase implements Listener{
 		$username = $player->getName();
 		$this->prepareStat($username);
 		$player->setHealth(20);
+		$player->addEffect();
 	}
 	public function onPlayerDeath(PlayerDeathEvent $event){
 		$player = $event->getEntity();
