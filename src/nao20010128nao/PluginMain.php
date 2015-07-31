@@ -54,6 +54,19 @@ class PluginMain extends PluginBase implements Listener{
 					"uaHunter"=>"You are a hunter!"
 					"uaEscaper"=>"You are a escaper!"
 					),
+				"field"=>array(
+					"level"=>"world",
+					"hunter"=>array(
+						"x"=>0,
+						"y"=>0,
+						"z"=>0,
+						),
+					"escaper"=>array(
+						"x"=>0,
+						"y"=>0,
+						"z"=>0,
+						);
+					),
 				);
 			yaml_emit_file($this->getDataFolder()."system.yml",$temp);
 			$this->csender->sendMessage(TextFormat::RED."Starting stopping...");
@@ -62,26 +75,27 @@ class PluginMain extends PluginBase implements Listener{
 		}else{
 			$this->system=yaml_parse_file($this->getDataFolder()."system.yml");
 		}
-		$this->csender->sendMessage(TextFormat::GREEN."Loading stats.yml...");
-		if(file_exists($this->getDataFolder()."stats.yml")){
-			$this->stats=yaml_parse_file($this->getDataFolder()."stats.yml");
+		$this->csender->sendMessage(TextFormat::GREEN."Loading stats.db...");
+		if(file_exists($file=$this->getDataFolder()."stats.yml")){
+			$this->stats=\SQLite3($file,SQLITE3_OPEN_READWRITE);
 		}else{
-			$this->stats=array();
+			$this->stats=\SQLite3($file,SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
 		}
+		$this->db_s("CREATE TABLE IF NOT EXISTS player(name TEXT PRIMARY KEY, catches INT, caught INT, becomeHunter INT, becomeEscaper INT)");
 		$this->csender->sendMessage(TextFormat::GREEN."Preparing some...");
 		$commandMap = $this->getServer()->getCommandMap();
 		$commandMap->register(
-			"entry", 
+			"entry",
 			new EntryCommand($this, "entry", "Entry into the game.")
 		);
 		$commandMap->register(
-			"stats", 
+			"stats",
 			new StatsCommand($this, "stats", "View your stats.")
 		);
 		$this->csender->sendMessage(TextFormat::GREEN."Done! Continuing enabling next plugins...");
 	}
 	public function onDisable(){
-		yaml_emit_file($this->getDataFolder()."stats.yml",$this->stats);
+		$this->stats->close();
 	}
 	public function onBlockPlace(BlockPlaceEvent $event){
 		$player = $event->getPlayer();
@@ -100,6 +114,12 @@ class PluginMain extends PluginBase implements Listener{
 		$username = $player->getName();
 		
 	}
+	public function onPlayerJoin(PlayerJoinEvent $event){
+		$player = $event->getPlayer();
+		$username = $player->getName();
+		$this->prepareStat($username);
+		$player->setHealth(20);
+	}
 	public function onPlayerDeath(PlayerDeathEvent $event){
 		$player = $event->getEntity();
 		$username = $player->getName();
@@ -113,16 +133,18 @@ class PluginMain extends PluginBase implements Listener{
 		$event->setCancelled(true);
 	}
 	private function prepareStat($name){
-		if(!array_key_exists($this->stats,mb_strtolower($name))){
-			$this->stats=array_merge($this->stats,array(mb_strtolower($name)=>array(
-				"catches"=>0,
-				"caught"=>0,
-				"becomeHunter"=>0,
-				"becomeEscaper"=>0,
-				)));
+		$name=strtolower($name);
+		$stat=$this->db_s("SELECT ban, reason, stuff FROM player WHERE name = \"$name\"",true);
+		if(empty($stat)){
+			$this->db_s("INSERT OR REPLACE INTO player VALUES(\"$name\", \"0\", \"0\", \"0\", \"0\")");
 		}
-		if(!array_key_exists($this->money,mb_strtolower($name))){
-			$this->money=array_merge($this->money,array(mb_strtolower($name)=>0));
+	}
+	function db_s($sql, $return = false){
+		if($return){
+			return $this->stats->query($sql)->fetchArray();
+		}else{
+			$this->stats->query($sql);
+			return true;
 		}
 	}
 }
