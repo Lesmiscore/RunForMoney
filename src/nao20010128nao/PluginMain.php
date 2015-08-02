@@ -16,7 +16,9 @@ use pocketmine\utils\TextFormat;
 
 use pocketmine\event\Listener;
 
-use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\entity\Effect;
+
+use poscketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\player\PlayerCommandPreprocessEvent;
 use pocketmine\event\player\PlayerChatEvent;
@@ -35,7 +37,7 @@ class PluginMain extends PluginBase implements Listener{
 	public $system;
 	public $stats;
 	public $state;
-	public $skins;
+	public $session;
 	public function onEnable(){
 		$this->state=0;
 		$this->csender=new ConsoleCommandSender();
@@ -50,26 +52,41 @@ class PluginMain extends PluginBase implements Listener{
 			$this->csender->sendMessage(TextFormat::RED."Creating template...");
 			$temp=array(
 				"messages"=>array(
-					"notJoined"=>"You are not joined the game."
-					"uaHunter"=>"You are a hunter!"
-					"uaEscaper"=>"You are a escaper!"
+					"notJoined"=>TextFormat::RED."You are not joined the game."
+					"uaHunter"=>TextFormat::RED."You are a hunter!"
+					"uaEscaper"=>TextFormat::GREEN."You are a escaper!"
+					),
+				"lobby"=>array(
+					"level"=>"world",
+					"where"=>array(
+							"x"=>0,
+							"y"=>0,
+							"z"=>0,
+							),
 					),
 				"field"=>array(
-					"level"=>"world",
-					"hunter"=>array(
-						"x"=>0,
-						"y"=>0,
-						"z"=>0,
-						),
-					"escaper"=>array(
-						"x"=>0,
-						"y"=>0,
-						"z"=>0,
-						);
+					"world"=>array(
+						"hunter"=>array(
+							"x"=>0,
+							"y"=>0,
+							"z"=>0,
+							),
+						"escaper"=>array(
+							"x"=>0,
+							"y"=>0,
+							"z"=>0,
+						)
+					)
+				),
+				"hunters"=>array(
+					"hunterRatio"=>"0.2",
 					),
-				);
+				"game"=>array(
+					"need"=>"15",
+					),
+			);
 			yaml_emit_file($this->getDataFolder()."system.yml",$temp);
-			$this->csender->sendMessage(TextFormat::RED."Starting stopping...");
+			$this->csender->sendMessage(TextFormat::RED."Stopping...");
 			$this->getServer()->shutdown();
 			return;
 		}else{
@@ -119,13 +136,12 @@ class PluginMain extends PluginBase implements Listener{
 		$username = $player->getName();
 		$this->prepareStat($username);
 		$player->setHealth(20);
-		$player->addEffect();
+		$player->addEffect(Effect::getEffect(1)->setDuration(10000)->setVisible(false)->setAmplifier(2));
 	}
 	public function onPlayerDeath(PlayerDeathEvent $event){
 		$player = $event->getEntity();
 		$username = $player->getName();
 		$event->setKeepInventory(true);
-		
 	}
 	public function onPlayerDamageBlock(EntityDamageByBlockEvent $event){
 		$event->setCancelled(true);
